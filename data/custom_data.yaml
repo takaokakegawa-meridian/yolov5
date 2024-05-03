@@ -1,0 +1,14 @@
+path: ../datasets
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 2
+names: ['body', 'face']
+
+roboflow:
+  workspace: facialtrackdetect
+  project: face-detection-rfthv
+  version: 2
+  license: Private
+  url: https://app.roboflow.com/facialtrackdetect/face-detection-rfthv/2
