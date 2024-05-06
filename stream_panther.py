@@ -112,7 +112,7 @@ while True:
 
     # min/max stabilization
     # clip before and after applying STARK filter
-    frame = data_to_frame(data, (ncols, nrows), hflip=False);
+    frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
     min_temp1= minav(np.median(np.sort(frame.flatten())[:16]))
     max_temp1= maxav(np.median(np.sort(frame.flatten())[-5:]))
     frame = np.clip(frame, min_temp1, max_temp1)

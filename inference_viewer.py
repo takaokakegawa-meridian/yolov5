@@ -6,8 +6,8 @@ import cv2 as cv
 import os
 
 # Load the YOLOv5s model
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='runs/train/exp2/weights/best.pt')
-
+# model = torch.hub.load('ultralytics/yolov5', 'custom', path='runs/train/exp2/weights/best.pt')
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
 # Set the device to GPU if available, otherwise use CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # Move the model to the device
@@ -51,12 +51,27 @@ model.eval()
 #         cv.imwrite(os.path.join(r"C:\Users\takao\Desktop\YoloV8 Data\test_images", f"test_{count}.jpg"), image)
 #         count += 1
 
+# def evaluate(arr):
+#     assert arr.shape == (460,460, 3), "incompatible shape"
+#     with torch.no_grad():
+#         results = model(arr)
+#     labels = results.xyxy[0][:, -1].numpy()
+#     boxes = results.xyxy[0][:, :-1].numpy()
+#     scores = results.xyxy[0][:, 4].numpy()
+#     return labels, boxes, scores
+
 def evaluate(arr):
-    assert arr.shape == (460,460, 3), "incompatible shape"
+    frame = arr.copy()
     with torch.no_grad():
         results = model(arr)
     labels = results.xyxy[0][:, -1].numpy()
     boxes = results.xyxy[0][:, :-1].numpy()
     scores = results.xyxy[0][:, 4].numpy()
-    return labels, boxes, scores
+    for _, box, _ in zip(labels, boxes, scores):
+        xB = int(box[2])
+        xA = int(box[0])
+        yB = int(box[3])
+        yA = int(box[1])
+        cv.rectangle(frame, (xA, yA), (xB, yB), (0, 255, 0), 1)
+    return frame
 
