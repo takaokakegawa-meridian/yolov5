@@ -10,8 +10,7 @@ import numpy as np
 import pandas as pd
 from senxorplus.stark import STARKFilter
 from preprocessing import preprocess
-import torch
-
+from inference_viewer import evaluate
 try:
     import cv2 as cv
 except:
@@ -33,14 +32,13 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
 # This allows it to be used directly in a signal_handler.
 global mi48
 
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='runs/train/exp2/weights/best.pt')
+# model = torch.hub.load('ultralytics/yolov5', 'custom', path='runs/train/exp2/weights/best.pt')
+# # Set the device to GPU if available, otherwise use CPU
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Set the device to GPU if available, otherwise use CPU
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Move the model to the device
-model.to(device)
-model.eval()
+# # Move the model to the device
+# model.to(device)
+# model.eval()
 
 # define a signal handler to ensure clean closure upon CTRL+C
 # or kill from terminal
@@ -104,7 +102,7 @@ stark_par = {'sigmoid': 'sigmoid',
              'alpha': 2.0,
              'beta': 2.0,}
 frame_filter = STARKFilter(stark_par)
-
+# with torch.no_grad():
 while True:
     data, header = mi48.read()
     if data is None:
@@ -127,15 +125,19 @@ while True:
     print(f'{data.min():1f}: {min_temp1:.1f} ({min_temp2:.1f}), {data.max():.1f}: {max_temp1:.1f} ({max_temp2:.1f})')
     #
     processed_frame = preprocess(frame)
-    # Perform inference
-    results = model(processed_frame)
+    # # Perform inference
+    # results = model(processed_frame)
+    # labels, boxes, scores = evaluate(processed_frame.copy())
+    # # Get the detected object labels, bounding box coordinates, and confidence scores
+    # labels = results.xyxy[0][:, -1].numpy()
+    # print(f"labels: {labels}")
+    # boxes = results.xyxy[0][:, :-1].numpy()
+    # scores = results.xyxy[0][:, 4].numpy()
 
-    # Get the detected object labels, bounding box coordinates, and confidence scores
-    labels = results.xyxy[0][:, -1].numpy()
-    boxes = results.xyxy[0][:, :-1].numpy()
-    scores = results.xyxy[0][:, 4].numpy()
-
-    cv_render(remap(frame), resize=(400,310), colormap='rainbow2')  #, n_colors=10)
+    # cv.imshow('', processed_frame)
+    cv_render(remap(frame),
+              resize=(frame.shape[1]*3,frame.shape[0]*3),
+              colormap='rainbow2')
     key = cv.waitKey(1)  # & 0xFF
     if key == ord("q"):
         break
