@@ -77,7 +77,7 @@ def camPreview(previewName, camID):
         else:
             rval = False
 
-        count = 15
+        count = 51
         while rval:
             # cropped_frame = np.array([array[::-1] for array in frame[10:,30:-30]])
             cropped_frame = np.array([array[::-1] for array in frame[:,90:-90]])
@@ -94,7 +94,7 @@ def camPreview(previewName, camID):
         mi48.stop()
         cv.destroyAllWindows()
     else:
-        count = 15
+        count = 51
         while True:
             data, _ = mi48.read()
             if data is None:

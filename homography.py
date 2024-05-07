@@ -20,7 +20,8 @@ def homographic_blend(thermal_img, webcam_img, thermal_pts, webcam_pts):
     M = cv.getPerspectiveTransform(thermal_pts,webcam_pts)    
     dst = cv.warpPerspective(thermal_img, M, (cols, rows))
     overlay = cv.addWeighted(webcam_img, 0.3, dst, 0.7, 0)
-    return overlay
+    # return overlay
+    return dst
 
 def main(thermal_root, webcam_root):
     for f in os.listdir(thermal_root):
@@ -28,7 +29,6 @@ def main(thermal_root, webcam_root):
         thermal_img = cv.imread(os.path.join(thermal_root, f"sampt_{idx}.png"))
         webcam_img = cv.imread(os.path.join(webcam_root, f"samp_{idx}.png"))
         overlay = homographic_blend(thermal_img, webcam_img, thermal_pts, webcam_pts)
-        # overlay = homographic_blend(thermal_img, webcam_img, thermal_pts, webcam_pts)
 
 
     # cv.namedWindow("Overlaid Image")
@@ -42,10 +42,17 @@ def main(thermal_root, webcam_root):
     # cv.destroyAllWindows()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-thermal', '--thermal-root', default=local_thermal_root, type=str,
-                        dest='thermal_root', help='thermal image root directory')
-    parser.add_argument('-webcam', '--webcam-root', default=local_webcam_root, type=str,
-                        dest='webcam_root', help='webcam image root directory')
-    args = parser.parse_args()
-    main(args.thermal_root, args.webcam_root)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-thermal', '--thermal-root', default=local_thermal_root, type=str,
+    #                     dest='thermal_root', help='thermal image root directory')
+    # parser.add_argument('-webcam', '--webcam-root', default=local_webcam_root, type=str,
+    #                     dest='webcam_root', help='webcam image root directory')
+    # args = parser.parse_args()
+    # main(args.thermal_root, args.webcam_root)
+    thermal_img = cv.imread(os.path.join(local_thermal_root, f"sampt_26.png"))
+    webcam_img = cv.imread(os.path.join(local_webcam_root, f"samp_26.png"))
+    cv.namedWindow("Warped Image")
+    cv.imshow("Warped Image",homographic_blend(thermal_img, webcam_img, thermal_pts, webcam_pts))
+    cv.waitKey(0)
+    # Close all windows
+    cv.destroyAllWindows()
