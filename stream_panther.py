@@ -9,8 +9,8 @@ import serial
 import numpy as np
 import pandas as pd
 from senxorplus.stark import STARKFilter
-from preprocessing import preprocess
-from inference_viewer import evaluate
+# from preprocessing import preprocess
+# from inference_viewer import evaluate
 try:
     import cv2 as cv
 except:
@@ -78,8 +78,9 @@ mi48.regwrite(0x25, 0x00)   # disable MMS
 #mi48.enable_filter(f1=True, f2=False, f3=False, f3_ks_5=False)
 
 
-mi48.set_sens_factor(100)
-mi48.set_offset_corr(0.0)
+mi48.set_sens_factor(95)
+mi48.set_offset_corr(1.5)
+mi48.set_emissivity(97)
 
 # initiate continuous frame acquisition
 time.sleep(1)
@@ -122,9 +123,10 @@ while True:
     frame = np.clip(frame, min_temp1, max_temp2)
 
     frange = frame.max() - frame.min()
+    print(f"frame shape: {frame.shape}")
     print(f'{data.min():1f}: {min_temp1:.1f} ({min_temp2:.1f}), {data.max():.1f}: {max_temp1:.1f} ({max_temp2:.1f})')
     #
-    processed_frame = preprocess(frame)
+    # processed_frame = preprocess(frame)
     # # Perform inference
     # results = model(processed_frame)
     # labels, boxes, scores = evaluate(processed_frame.copy())
@@ -136,7 +138,7 @@ while True:
 
     # cv.imshow('', processed_frame)
     cv_render(remap(frame),
-              resize=(frame.shape[1]*3,frame.shape[0]*3),
+              resize=(frame.shape[1]*4,frame.shape[0]*4),
               colormap='rainbow2')
     key = cv.waitKey(1)  # & 0xFF
     if key == ord("q"):

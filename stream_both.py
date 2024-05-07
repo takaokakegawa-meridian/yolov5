@@ -7,12 +7,12 @@ import time
 import logging
 import numpy as np
 from senxorplus.stark import STARKFilter
-from preprocessing import preprocess
+# from preprocessing import preprocess
 from senxor.utils import data_to_frame, remap,\
                          cv_render, RollingAverageFilter,\
                          connect_senxor
 import threading
-from inference_viewer import evaluate
+# from inference_viewer import evaluate
 
 # This will enable mi48 logging debug messages
 logger = logging.getLogger(__name__)
@@ -23,9 +23,9 @@ global mi48
 def signal_handler(sig, frame):
     """Ensure clean exit in case of SIGINT or SIGTERM"""
     logger.info("Exiting due to SIGINT or SIGTERM")
-    mi48.stop()
-    cv.destroyAllWindows()
-    logger.info("Done.")
+    # mi48.stop()
+    # cv.destroyAllWindows()
+    # logger.info("Done.")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -39,8 +39,9 @@ mi48.regwrite(0xB4, 0x03)
 mi48.regwrite(0xD0, 0x00)   # disable temporal filter
 mi48.regwrite(0x30, 0x00)   # disable median filter
 mi48.regwrite(0x25, 0x00)
-mi48.set_sens_factor(100)
-mi48.set_offset_corr(0.0)
+mi48.set_sens_factor(95)
+mi48.set_offset_corr(1.5)
+mi48.set_emissivity(97)
 time.sleep(1)
 with_header = True
 mi48.start(stream=True, with_header=with_header)
@@ -76,15 +77,24 @@ def camPreview(previewName, camID):
         else:
             rval = False
 
+        count = 15
         while rval:
-            cropped_frame = np.array([array[::-1] for array in frame[10:,30:-30]])
-            cv.imshow(previewName, evaluate(cropped_frame))
+            # cropped_frame = np.array([array[::-1] for array in frame[10:,30:-30]])
+            cropped_frame = np.array([array[::-1] for array in frame[:,90:-90]])
+            cv.imshow(previewName, cropped_frame)
+            cv.imwrite(os.path.join(r"C:\Users\takao\Desktop\YoloV8 Data\face_images\webcam_imgs",
+                                    f"samp_{count}.png"),
+                       cropped_frame)
             rval, frame = cam.read()
             key = cv.waitKey(1)
-            if key == ord("q"):  # exit on ESC
+            if key == ord("q"):  # exit on 'q' key press
                 break
+            count += 1
         cv.destroyWindow(previewName)
+        mi48.stop()
+        cv.destroyAllWindows()
     else:
+        count = 15
         while True:
             data, _ = mi48.read()
             if data is None:
@@ -92,7 +102,8 @@ def camPreview(previewName, camID):
                 mi48.stop()
                 sys.exit(1)
 
-            frame = data_to_frame(data, (ncols, nrows), hflip=False)[15:-17,14:-59];
+            # frame = data_to_frame(data, (ncols, nrows), hflip=False)[15:-17,14:-59]
+            frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
             min_temp1= minav(np.median(np.sort(frame.flatten())[:16]))
             max_temp1= maxav(np.median(np.sort(frame.flatten())[-5:]))
             frame = np.clip(frame, min_temp1, max_temp1)
@@ -100,14 +111,16 @@ def camPreview(previewName, camID):
             # min_temp2 = minav2(np.median(np.sort(frame.flatten())[:9]))
             max_temp2= maxav2(np.median(np.sort(frame.flatten())[-5:]))
             frame = np.clip(frame, min_temp1, max_temp2)
+            cv.imwrite(os.path.join(r"C:\Users\takao\Desktop\YoloV8 Data\face_images\thermal_imgs",
+                                    f"sampt_{count}.png"),
+                       cv_render(remap(frame),
+                      resize=(frame.shape[1]*4,frame.shape[0]*4)))
 
-            cv_render(remap(frame),
-                      resize=(frame.shape[1]*3,frame.shape[0]*3),
-                      colormap='inferno')
             # cv.imshow('', preprocess(frame))
             key = cv.waitKey(1)  # & 0xFF
             if key == ord("q"):
                 break
+            count += 1
         mi48.stop()
         cv.destroyAllWindows()
 

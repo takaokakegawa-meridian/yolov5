@@ -11,8 +11,10 @@ def video_to_frames(path_output_dir):
         rval = False
 
     while rval:
-        cropped_frame = np.array([array[::-1] for array in frame[10:,30:-30]])
-        cv.imwrite(os.path.join(path_output_dir, f"face_{count}.png"), cropped_frame)
+        cropped_frame = np.array([array[::-1] for array in frame[:,90:-90]])
+        # cropped_frame = np.array([array[::-1] for array in frame])
+        print(f"cropped frame shape: {cropped_frame.shape}")
+        # cv.imwrite(os.path.join(path_output_dir, f"face_{count}.png"), cropped_frame)
         cv.imshow("", cropped_frame)
         rval, frame = cam.read()
         count += 1

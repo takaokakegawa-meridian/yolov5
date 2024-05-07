@@ -10,7 +10,4 @@ def preprocess(frame):
     normalized_array = cv.normalize(frame.astype('float32'), None, 0, 255, cv.NORM_MINMAX, dtype=cv.CV_8U)
     gray_image_norm = cv.cvtColor(normalized_array,cv.COLOR_GRAY2BGR)
     result = sr.upsample(gray_image_norm)
-    imC = cv.applyColorMap(result, cv.COLORMAP_INFERNO)
-
-    # return result
-    return imC
+    return result
