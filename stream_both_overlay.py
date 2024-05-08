@@ -12,7 +12,6 @@ from senxorplus.stark import STARKFilter
 from homography import homographic_blend
 import cv2 as cv
 
-# from senxor.mi48 import MI48, format_header, format_framestats
 from senxor.utils import data_to_frame, remap,\
                          cv_render, RollingAverageFilter,\
                          connect_senxor
@@ -67,10 +66,6 @@ mi48.regwrite(0xD0, 0x00)   # disable temporal filter
 #mi48.regwrite(0x20, 0x00)   # disable STARK filter
 mi48.regwrite(0x30, 0x00)   # disable median filter
 mi48.regwrite(0x25, 0x00)   # disable MMS
-#mi48.disable_filter(f1=True, f2=True, f3=True)
-#mi48.set_filter_1(85)
-#mi48.enable_filter(f1=True, f2=False, f3=False, f3_ks_5=False)
-
 
 mi48.set_sens_factor(95)
 mi48.set_offset_corr(1.5)
@@ -80,9 +75,6 @@ mi48.set_emissivity(97)
 time.sleep(1)
 with_header = True
 mi48.start(stream=True, with_header=with_header)
-
-# set cv_filter parameters
-#par = {'blur_ks':3, 'd':5, 'sigmaColor': 27, 'sigmaSpace': 27}
 
 minav = RollingAverageFilter(N=15)
 maxav = RollingAverageFilter(N=8)
@@ -98,7 +90,7 @@ stark_par = {'sigmoid': 'sigmoid',
              'alpha': 2.0,
              'beta': 2.0,}
 frame_filter = STARKFilter(stark_par)
-# with torch.no_grad():
+
 data, header = mi48.read()
 cam = cv.VideoCapture(0)
 
@@ -114,25 +106,26 @@ else:
         webcam_img = np.array([array[::-1] for array in raw_webcam[:,90:-90]])
         # min/max stabilization
         # clip before and after applying STARK filter
-        frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
-        min_temp1= minav(np.median(np.sort(frame.flatten())[:16]))
-        max_temp1= maxav(np.median(np.sort(frame.flatten())[-5:]))
-        frame = np.clip(frame, min_temp1, max_temp1)
-        frame = frame_filter(frame)
-        min_temp2 = minav2(np.median(np.sort(frame.flatten())[:9]))
-        max_temp2= maxav2(np.median(np.sort(frame.flatten())[-5:]))
-        frame = np.clip(frame, min_temp1, max_temp2)
+        thermal_frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
+        min_temp1= minav(np.median(np.sort(thermal_frame.flatten())[:16]))
+        max_temp1= maxav(np.median(np.sort(thermal_frame.flatten())[-5:]))
+        thermal_frame = np.clip(thermal_frame, min_temp1, max_temp1)
+        thermal_frame = frame_filter(thermal_frame)
+        min_temp2 = minav2(np.median(np.sort(thermal_frame.flatten())[:9]))
+        max_temp2= maxav2(np.median(np.sort(thermal_frame.flatten())[-5:]))
+        thermal_frame = np.clip(thermal_frame, min_temp1, max_temp2)
 
-        frange = frame.max() - frame.min()
-        print(f"frame shape: {frame.shape}")
+        frange = thermal_frame.max() - thermal_frame.min()
+        print(f"frame shape: {thermal_frame.shape}")
         print(f'{data.min():1f}: {min_temp1:.1f} ({min_temp2:.1f}), {data.max():.1f}: {max_temp1:.1f} ({max_temp2:.1f})')
         
-        thermal_img = cv_render(remap(frame),
-                resize=(frame.shape[1]*4,frame.shape[0]*4),
-                colormap='rainbow2',
-                display=False)
+        # thermal_img = cv_render(remap(frame),
+        #         resize=(frame.shape[1]*4,frame.shape[0]*4),
+        #         colormap='rainbow2',
+        #         display=False)
+        thermal_img = upsample_display(thermal_frame)
         
-        overlay_img = homographic_blend(thermal_img, webcam_img)
+        overlay_img = homographic_blend(thermal_img, webcam_img,alpha=0.)
 
         cv.namedWindow("Thermal Image")
         cv.namedWindow("Webcam Image")
@@ -141,6 +134,11 @@ else:
         cv.imshow("Webcam Image",webcam_img)
         cv.imshow("Overlaid Image",overlay_img)
 
+        # cv.imwrite(os.path.join(r"C:\Users\takao\Desktop\YoloV8 Data\face_images\facial_overlaid_imgs\thermal_imgs",
+        #                             f"thermal_{count}.png"),thermal_img)
+        # cv.imwrite(os.path.join(r"C:\Users\takao\Desktop\YoloV8 Data\face_images\facial_overlaid_imgs\webcam_imgs",
+        #                             f"sampt_{count}.png"),webcam_img)
+        # count += 1
         key = cv.waitKey(1)  # & 0xFF
         if key == ord("q"):
             break

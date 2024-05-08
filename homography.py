@@ -7,22 +7,22 @@ local_thermal_root = r"C:\Users\takao\Desktop\YoloV8 Data\face_images\facial_ove
 local_webcam_root = r"C:\Users\takao\Desktop\YoloV8 Data\face_images\facial_overlaid_imgs\webcam_imgs"
 local_homography_root = r"C:\Users\takao\Desktop\YoloV8 Data\face_images\facial_overlaid_imgs\homography_imgs"
 
-thermal_pts = np.float32([[166,208],[284,201],[227,262],[229,322]]) # thermal landmark coords 
-webcam_pts = np.float32([[166,216],[298,218],[228,299],[226,375]])
+local_M = np.array([[1.15879826e+00,1.98254068e-01,-3.82725310e+01],
+                    [1.46173730e-02,1.99701285e+00,-1.63647552e+02],
+                    [-4.94082740e-04,1.24362170e-03,1.00000000e+00]])
 
 def naive_blend(image1, image2, alpha=0.5):
     assert alpha <= 1.0 and alpha >= 0., "alpha must be between 0 and 1"
     super_imposed_img = cv.addWeighted(image1, alpha, image2, 1-alpha, 0)
     return super_imposed_img
 
-def homographic_blend(thermal_img, webcam_img, thermal_pts=thermal_pts, webcam_pts=webcam_pts):
+def homographic_blend(thermal_img, webcam_img, M=local_M, alpha=0.3):
     rows,cols, _ = webcam_img.shape
-    M = cv.getPerspectiveTransform(thermal_pts,webcam_pts)
     # print("M: ")    
     # print(M)
     # print("\n")
     dst = cv.warpPerspective(thermal_img, M, (cols, rows))
-    overlay = cv.addWeighted(webcam_img, 0.3, dst, 0.7, 0)
+    overlay = cv.addWeighted(webcam_img, alpha, dst, 1-alpha, 0)
     return overlay
     # return dst
 
@@ -32,7 +32,7 @@ def main(thermal_root, webcam_root):
         print(f"idx: {idx}")
         thermal_img = cv.imread(os.path.join(thermal_root, f"sampt_{idx}.png"))
         webcam_img = cv.imread(os.path.join(webcam_root, f"samp_{idx}.png"))
-        overlay = homographic_blend(thermal_img, webcam_img, thermal_pts, webcam_pts)
+        overlay = homographic_blend(thermal_img, webcam_img)
 
 
     # cv.namedWindow("Overlaid Image")
@@ -52,6 +52,7 @@ if __name__ == '__main__':
     parser.add_argument('-webcam', '--webcam-root', default=local_webcam_root, type=str,
                         dest='webcam_root', help='webcam image root directory')
     args = parser.parse_args()
+
     main(args.thermal_root, args.webcam_root)
     # cv.waitKey(0)
     # # Close all windows
