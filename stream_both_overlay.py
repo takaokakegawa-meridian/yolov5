@@ -7,19 +7,13 @@ import time
 import logging
 import serial
 import numpy as np
-import pandas as pd
+# import pandas as pd
 from senxorplus.stark import STARKFilter
-# from preprocessing import preprocess
-# from inference_viewer import evaluate
-try:
-    import cv2 as cv
-except:
-    print("Please install OpenCV (or link existing installation)"
-          " to see the thermal image")
-    exit(1)
+from homography import homographic_blend
+import cv2 as cv
 
 # from senxor.mi48 import MI48, format_header, format_framestats
-from senxor.utils import data_to_frame, remap, cv_filter,\
+from senxor.utils import data_to_frame, remap,\
                          cv_render, RollingAverageFilter,\
                          connect_senxor
 
@@ -31,14 +25,6 @@ logging.basicConfig(level=os.environ.get("LOGLEVEL", "DEBUG"))
 # Make the a global variable and use it as an instance of the mi48.
 # This allows it to be used directly in a signal_handler.
 global mi48
-
-# model = torch.hub.load('ultralytics/yolov5', 'custom', path='runs/train/exp2/weights/best.pt')
-# # Set the device to GPU if available, otherwise use CPU
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# # Move the model to the device
-# model.to(device)
-# model.eval()
 sr = cv.dnn_superres.DnnSuperResImpl_create()
 sr.readModel(r"ESPCN_x4.pb")
 sr.setModel("espcn",4)
@@ -113,45 +99,52 @@ stark_par = {'sigmoid': 'sigmoid',
              'beta': 2.0,}
 frame_filter = STARKFilter(stark_par)
 # with torch.no_grad():
-# all_data = None
-while True:
-    data, header = mi48.read()
-    if data is None:
+data, header = mi48.read()
+cam = cv.VideoCapture(0)
+
+if (data is None) or not (cam.isOpened()):
         logger.critical('NONE data received instead of GFRA')
         mi48.stop()
+        cv.destroyAllWindows()
         sys.exit(1)
+else:
+    while True:
+        data, header = mi48.read()
+        rval, raw_webcam = cam.read()
+        webcam_img = np.array([array[::-1] for array in raw_webcam[:,90:-90]])
+        # min/max stabilization
+        # clip before and after applying STARK filter
+        frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
+        min_temp1= minav(np.median(np.sort(frame.flatten())[:16]))
+        max_temp1= maxav(np.median(np.sort(frame.flatten())[-5:]))
+        frame = np.clip(frame, min_temp1, max_temp1)
+        frame = frame_filter(frame)
+        min_temp2 = minav2(np.median(np.sort(frame.flatten())[:9]))
+        max_temp2= maxav2(np.median(np.sort(frame.flatten())[-5:]))
+        frame = np.clip(frame, min_temp1, max_temp2)
 
-    # min/max stabilization
-    # clip before and after applying STARK filter
-    frame = data_to_frame(data, (ncols, nrows), hflip=False)[:,:-45]
-    # min_temp1= minav(np.median(np.sort(frame.flatten())[:16]))
-    # max_temp1= maxav(np.median(np.sort(frame.flatten())[-5:]))
-    # frame = np.clip(frame, min_temp1, max_temp1)
-    # frame = frame_filter(frame)
-    # min_temp2 = minav2(np.median(np.sort(frame.flatten())[:9]))
-    # max_temp2= maxav2(np.median(np.sort(frame.flatten())[-5:]))
-    # frame = np.clip(frame, min_temp1, max_temp2)
+        frange = frame.max() - frame.min()
+        print(f"frame shape: {frame.shape}")
+        print(f'{data.min():1f}: {min_temp1:.1f} ({min_temp2:.1f}), {data.max():.1f}: {max_temp1:.1f} ({max_temp2:.1f})')
+        
+        thermal_img = cv_render(remap(frame),
+                resize=(frame.shape[1]*4,frame.shape[0]*4),
+                colormap='rainbow2',
+                display=False)
+        
+        overlay_img = homographic_blend(thermal_img, webcam_img)
 
-    # frange = frame.max() - frame.min()
-    # print(f"frame shape: {frame.shape}")
-    # print(f'{data.min():1f}: {min_temp1:.1f} ({min_temp2:.1f}), {data.max():.1f}: {max_temp1:.1f} ({max_temp2:.1f})')
+        cv.namedWindow("Thermal Image")
+        cv.namedWindow("Webcam Image")
+        cv.namedWindow("Overlaid Image")
+        cv.imshow("Thermal Image",thermal_img)
+        cv.imshow("Webcam Image",webcam_img)
+        cv.imshow("Overlaid Image",overlay_img)
 
-    # cv.imshow('', processed_frame)
-    # if all_data is None:
-    #     all_data = frame.flatten()
-    # else:
-    #     all_data = np.vstack((all_data, frame.flatten()))
-    
-    cv_render(remap(frame),
-              resize=(frame.shape[1],frame.shape[0]),
-              colormap='rainbow2')
-    # cv.imshow("",upsample_display(frame))
-    key = cv.waitKey(1)  # & 0xFF
-    if key == ord("q"):
-        break
+        key = cv.waitKey(1)  # & 0xFF
+        if key == ord("q"):
+            break
 
-# df = pd.DataFrame(data=all_data,columns=[f"px_{i}" for i in range(120*115)])
-# df.to_csv(r"C:\Users\takao\Desktop\YoloV8 Data\sample_thermal_readings.csv", index=False)
 # stop capture and quit
 mi48.stop()
 cv.destroyAllWindows()

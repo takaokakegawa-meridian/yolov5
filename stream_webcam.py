@@ -4,7 +4,7 @@ import os
 
 def video_to_frames(path_output_dir):
     count = 0
-    cam = cv.VideoCapture(1)
+    cam = cv.VideoCapture(0)
     if cam.isOpened():  # try to get the first frame
         rval, frame = cam.read()
     else:
@@ -23,4 +23,4 @@ def video_to_frames(path_output_dir):
             break
     cv.destroyAllWindows()
 
-video_to_frames(r"C:\Users\takao\Desktop\YoloV8 Data\face_images\webcam_imgs")
+video_to_frames("")
