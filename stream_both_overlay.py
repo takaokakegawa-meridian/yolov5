@@ -125,7 +125,7 @@ else:
         #         display=False)
         thermal_img = upsample_display(thermal_frame)
         
-        overlay_img = homographic_blend(thermal_img, webcam_img,alpha=0.)
+        overlay_img = homographic_blend(thermal_img, webcam_img)
 
         cv.namedWindow("Thermal Image")
         cv.namedWindow("Webcam Image")
